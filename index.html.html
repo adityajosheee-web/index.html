@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bioreactor Simulation — Batch Ethanol Fermentation</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#0f172a;color:#e5e7eb}
+.wrap{max-width:1200px;margin:auto;padding:24px}.title{font-size:30px;font-weight:700}.sub{color:#94a3b8;margin:6px 0 22px}
+.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}.card{background:#111827;border:1px solid #334155;border-radius:16px;padding:18px;box-shadow:0 8px 25px #0003}
+h2{font-size:18px;margin:0 0 14px}.specs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.spec{background:#1e293b;padding:12px;border-radius:10px}.spec b{display:block;color:#93c5fd;margin-bottom:5px}.diagram{height:440px;position:relative;background:linear-gradient(#172033,#0b1220);border-radius:12px;overflow:hidden}
+.tank{position:absolute;left:31%;top:45px;width:38%;height:300px;border:5px solid #cbd5e1;border-top:none;border-radius:0 0 90px 90px;background:linear-gradient(90deg,#0ea5e955,#22c55e33);overflow:hidden}
+.liquid{position:absolute;bottom:0;width:100%;height:70%;background:linear-gradient(#22c55e66,#0284c766);transition:.4s}
+.neck{position:absolute;left:45%;top:18px;width:10%;height:35px;border:5px solid #cbd5e1;background:#111827}
+.motor{position:absolute;left:44%;top:6px;width:12%;height:20px;background:#94a3b8;border-radius:4px}
+.shaft{position:absolute;left:49.3%;top:26px;width:6px;height:245px;background:#e2e8f0;z-index:4}
+.impeller{position:absolute;left:44%;top:235px;width:12%;height:8px;background:#e2e8f0;z-index:5}
+.bubble{position:absolute;width:7px;height:7px;background:#e0f2fe;border-radius:50%;bottom:40px;animation:up 3s infinite ease-in}
+@keyframes up{to{transform:translateY(-210px);opacity:0}}
+.b1{left:20%;animation-delay:.2s}.b2{left:27%;animation-delay:1s}.b3{left:35%;animation-delay:1.7s}.b4{left:62%;animation-delay:.5s}.b5{left:72%;animation-delay:1.3s}
+.label{position:absolute;background:#020617cc;padding:7px 10px;border-radius:8px;font-size:13px}.l1{left:5%;top:90px}.l2{right:5%;top:155px}.l3{left:8%;bottom:65px}.l4{right:6%;bottom:55px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ctrl{background:#1e293b;padding:12px;border-radius:10px}.ctrl label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px}.ctrl input{width:100%}
+.buttons{display:flex;gap:10px;margin-top:14px}.btn{border:0;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer}.start{background:#22c55e;color:#052e16}.reset{background:#475569;color:white}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.metric{background:#0b1220;padding:13px;border-radius:10px}.metric span{display:block;color:#94a3b8;font-size:12px}.metric strong{font-size:23px}
+.bar{height:8px;background:#334155;border-radius:99px;overflow:hidden;margin-top:7px}.fill{height:100%;width:0;background:#38bdf8}
+canvas{width:100%;height:170px;background:#0b1220;border-radius:10px;margin-top:12px}
+.note{font-size:12px;color:#94a3b8;line-height:1.5;margin-top:12px}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.tank{left:28%;width:44%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="title">Bioreactor Lab: Batch Ethanol Fermentation</div>
+  <div class="sub">Interactive educational simulation of a stirred-tank batch bioprocess</div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Bioreactor schematic</h2>
+      <div class="diagram">
+        <div class="neck"></div><div class="motor"></div>
+        <div class="tank"><div class="liquid" id="liq"></div>
+          <div class="bubble b1"></div><div class="bubble b2"></div><div class="bubble b3"></div><div class="bubble b4"></div><div class="bubble b5"></div>
+        </div>
+        <div class="shaft"></div><div class="impeller"></div>
+        <div class="label l1">Motor + agitator</div><div class="label l2">pH / temperature probes</div>
+        <div class="label l3">Culture medium</div><div class="label l4">Air inlet</div>
+      </div>
+      <div class="note">Model: simplified mass-balance style classroom simulation. It is not a validated industrial process model.</div>
+    </div>
+
+    <div class="card">
+      <h2>Process specifications</h2>
+      <div class="specs">
+        <div class="spec"><b>1. Reactor</b>Stirred-tank bioreactor (STR)</div>
+        <div class="spec"><b>2. Process</b>Batch fermentation</div>
+        <div class="spec"><b>3. Bioprocess</b>Alcoholic fermentation</div>
+        <div class="spec"><b>4. Product</b>Ethanol + CO₂</div>
+        <div class="spec"><b>5. Organism</b><i>Saccharomyces cerevisiae</i></div>
+        <div class="spec"><b>Substrate</b>Glucose-rich medium</div>
+      </div>
+
+      <h2 style="margin-top:18px">Operating controls</h2>
+      <div class="controls">
+        <div class="ctrl"><label>Temperature <b><span id="tv">30</span> °C</b></label><input id="temp" type="range" min="20" max="40" value="30"></div>
+        <div class="ctrl"><label>pH <b><span id="pv">5.0</span></b></label><input id="ph" type="range" min="3.5" max="7" step=".1" value="5"></div>
+        <div class="ctrl"><label>Agitation <b><span id="av">200</span> rpm</b></label><input id="agit" type="range" min="50" max="500" value="200"></div>
+        <div class="ctrl"><label>Air flow <b><span id="airv">0.20</span> vvm</b></label><input id="air" type="range" min="0" max="1" step=".05" value=".2"></div>
+      </div>
+      <div class="buttons"><button class="btn start" id="start">Start fermentation</button><button class="btn reset" id="reset">Reset</button></div>
+
+      <h2 style="margin-top:18px">Live results</h2>
+      <div class="metrics">
+        <div class="metric"><span>Time</span><strong id="time">0.0 h</strong></div>
+        <div class="metric"><span>Biomass</span><strong id="bio">1.00 g/L</strong></div>
+        <div class="metric"><span>Glucose</span><strong id="glu">100.0 g/L</strong></div>
+        <div class="metric"><span>Ethanol</span><strong id="eth">0.0 g/L</strong></div>
+      </div>
+      <div class="metric" style="margin-top:10px"><span>Dissolved oxygen</span><div class="bar"><div class="fill" id="do"></div></div><div style="font-size:13px;margin-top:5px" id="dov">55%</div></div>
+      <canvas id="chart" width="700" height="220"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let running=false,t=0,X=1,S=100,P=0,O=55,points=[];
+function val(id){return parseFloat($(id).value)}
+function updateLabels(){
+ $('tv').textContent=val('temp').toFixed(0); $('pv').textContent=val('ph').toFixed(1);
+ $('av').textContent=val('agit').toFixed(0); $('airv').textContent=val('air').toFixed(2);
+}
+['temp','ph','agit','air'].forEach(id=>$(id).addEventListener('input',updateLabels));
+function step(){
+ if(!running)return;
+ const T=val('temp'), ph=val('ph'), ag=val('agit'), air=val('air');
+ // Temperature/pH suitability factors around typical S. cerevisiae fermentation conditions.
+ const fT=Math.max(0,1-Math.abs(T-30)/12);
+ const fpH=Math.max(0,1-Math.abs(ph-5.0)/2.2);
+ const fAg=Math.min(1,0.65+ag/1000);
+ const mu=.34*fT*fpH*fAg;
+ const dt=.1;
+ const growth=mu*X*dt*Math.max(0,1-S/115);
+ const sugarUse=1.65*growth;
+ X=Math.min(18,X+growth);
+ S=Math.max(0,S-sugarUse);
+ P=Math.min(65,P+0.51*sugarUse);
+ const oxygenDemand=12*growth;
+ O=Math.max(0,Math.min(100,O + (air*32 + (ag-200)*.015 - oxygenDemand)*dt));
+ t+=dt;
+ points.push([t,X,S,P]); if(points.length>120)points.shift();
+ $('time').textContent=t.toFixed(1)+' h';$('bio').textContent=X.toFixed(2)+' g/L';
+ $('glu').textContent=S.toFixed(1)+' g/L';$('eth').textContent=P.toFixed(1)+' g/L';
+ $('do').style.width=O+'%';$('dov').textContent=O.toFixed(0)+'%';
+ $('liq').style.height=(55+Math.min(25,P/65*25))+'%';
+ draw();
+ if(S<=0 || t>=48){running=false;$('start').textContent='Start fermentation';}
+}
+function draw(){
+ const c=$('chart'),ctx=c.getContext('2d'),w=c.width,h=c.height;
+ ctx.clearRect(0,0,w,h);ctx.strokeStyle='#334155';ctx.lineWidth=1;
+ for(let i=0;i<5;i++){let y=20+i*40;ctx.beginPath();ctx.moveTo(35,y);ctx.lineTo(w-10,y);ctx.stroke();}
+ if(points.length<2)return;
+ const maxT=Math.max(48,t,1);
+ function line(index,scale,offset){
+   ctx.beginPath();
+   points.forEach((p,i)=>{let x=35+(p[0]/maxT)*(w-45), y=h-20-(p[index]/scale)*(h-40);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+   ctx.stroke();
+ }
+ // Use default canvas colors intentionally: biomass, glucose and ethanol are distinguishable by dash pattern.
+ ctx.setLineDash([]);ctx.strokeStyle='#38bdf8';line(1,18,0);
+ ctx.setLineDash([6,4]);ctx.strokeStyle='#f59e0b';line(2,100,0);
+ ctx.setLineDash([2,4]);ctx.strokeStyle='#a78bfa';line(3,65,0);ctx.setLineDash([]);
+ ctx.fillStyle='#94a3b8';ctx.font='12px Arial';ctx.fillText('Biomass / glucose / ethanol',42,16);
+}
+$('start').onclick=()=>{running=!running;$('start').textContent=running?'Pause fermentation':'Start fermentation';};
+$('reset').onclick=()=>{running=false;t=0;X=1;S=100;P=0;O=55;points=[];$('start').textContent='Start fermentation';$('time').textContent='0.0 h';$('bio').textContent='1.00 g/L';$('glu').textContent='100.0 g/L';$('eth').textContent='0.0 g/L';$('do').style.width='55%';$('dov').textContent='55%';draw();};
+updateLabels();draw();setInterval(step,100);
+</script>
+</body>
+</html>
