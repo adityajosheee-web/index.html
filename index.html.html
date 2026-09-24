@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bio Reactor Sim</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#07111f;--panel:#0d1929;--panel2:#102137;--line:#28415f;
+  --text:#edf5ff;--muted:#91a6bf;--cyan:#38bdf8;--green:#22c55e;
+  --amber:#f59e0b;--purple:#a78bfa;--red:#fb7185
+}
+body{
+  margin:0;color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;
+  background:
+    radial-gradient(circle at 12% 0%,#193b61 0%,transparent 32%),
+    radial-gradient(circle at 92% 0%,#123352 0%,transparent 25%),
+    linear-gradient(180deg,#07111f,#040a12);
+}
+.wrap{max-width:1350px;margin:auto;padding:22px}
+header{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:18px}
+h1{margin:0;font-size:30px}.sub{margin-top:5px;color:var(--muted)}
+.badge{padding:8px 12px;border-radius:999px;border:1px solid #2e5274;background:#0c2136;font-size:12px;color:#bfe4ff}
+.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+.card{background:linear-gradient(180deg,#0e1b2d,#0a1423);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 18px 50px #0008}
+h2{font-size:17px;margin:0 0 14px}
+.stage{
+  height:540px;position:relative;overflow:hidden;border-radius:16px;border:1px solid #274665;
+  background:radial-gradient(circle at 50% 28%,#244b72 0,#122c47 35%,#071323 76%);
+  perspective:1100px
+}
+.floor{position:absolute;left:5%;right:5%;bottom:20px;height:100px;border-radius:50%;
+  background:radial-gradient(ellipse,#173b5d 0,#0a1d31 48%,transparent 72%);
+  transform:rotateX(72deg);opacity:.85}
+.model{
+  position:absolute;left:50%;top:52%;width:370px;height:430px;
+  transform:translate(-50%,-50%) rotateX(4deg) rotateY(-14deg);
+  transform-style:preserve-3d
+}
+.tank{
+  position:absolute;left:50px;top:74px;width:270px;height:305px;
+  border:6px solid #b8c9da;border-top:0;border-radius:0 0 135px 135px;
+  background:linear-gradient(90deg,#122e48aa,#65e7b433 45%,#0a2035cc);
+  box-shadow:inset 16px 0 26px #fff1,inset -22px 0 30px #0018,0 25px 40px #0009;
+  overflow:hidden;transform:translateZ(18px)
+}
+.tank:before{
+  content:"";position:absolute;left:-6px;right:-6px;top:-8px;height:46px;
+  border:6px solid #b8c9da;border-radius:50%;background:linear-gradient(#243a52,#071221);
+  box-shadow:inset 0 7px 15px #fff1
+}
+.liquid{
+  position:absolute;left:0;right:0;bottom:0;height:70%;
+  background:
+    radial-gradient(circle at 22% 25%,#d9fff91c 0 2px,transparent 3px),
+    linear-gradient(180deg,#1cd17c55,#087f8d98 46%,#075985c7);
+  border-top:2px solid #74e6baaa;transition:height .35s
+}
+.topHead{position:absolute;left:63px;top:42px;width:244px;height:70px;transform:translateZ(36px);z-index:8}
+.dome{width:244px;height:61px;border:6px solid #b8c9da;border-radius:50% 50% 15px 15px;background:linear-gradient(#20354ddd,#081320)}
+.neck{position:absolute;left:98px;top:-21px;width:48px;height:39px;border:5px solid #b8c9da;border-radius:8px;background:#0a1525}
+.motor{position:absolute;left:99px;top:-40px;width:46px;height:23px;border-radius:5px;background:linear-gradient(#e0e7ef,#6a7f95);box-shadow:0 6px 12px #0008}
+.shaft{position:absolute;left:117px;top:12px;width:7px;height:260px;background:linear-gradient(90deg,#eef5fb,#71859b,#eef5fb);transform:translateZ(28px);z-index:10}
+.blade{position:absolute;left:55px;top:226px;width:125px;height:9px;border-radius:8px;background:#dfe9f2;transform:translateZ(30px);z-index:11;box-shadow:0 2px 7px #0009}
+.blade.b2{transform:translateZ(30px) rotateY(90deg)}
+.probe{position:absolute;width:13px;height:85px;border:3px solid #aec2d8;border-radius:8px;background:#152940;z-index:12}
+.probe.p1{right:4px;top:121px;transform:translateZ(28px)}
+.probe.p2{left:3px;top:167px;transform:translateZ(28px)}
+.port{position:absolute;width:23px;height:23px;border-radius:50%;background:#7890a8;border:4px solid #d5e1ec;z-index:15}
+.port.a{left:8px;top:20px}.port.b{right:8px;top:20px}.port.c{right:15px;bottom:43px}
+.pipe{position:absolute;border:5px solid #9ab0c8;background:transparent;border-radius:10px;opacity:.9}
+.pipe.in{left:0;top:24px;width:62px;height:78px;border-right:0;border-bottom-color:transparent}
+.pipe.out{right:-2px;top:26px;width:68px;height:65px;border-left:0;border-bottom-color:transparent}
+.gauge{position:absolute;top:97px;left:31px;width:76px;height:76px;border-radius:50%;
+  background:radial-gradient(circle,#091626 0 47%,#94a9bf 49% 53%,#1a2b41 55%);
+  border:4px solid #c1d0de;display:flex;align-items:center;justify-content:center;font-size:11px;color:#d9efff;z-index:20;box-shadow:0 8px 16px #0008}
+.light{position:absolute;right:25px;top:83px;width:11px;height:11px;border-radius:50%;background:var(--green);box-shadow:0 0 14px #22c55ecc;z-index:20}
+.bubble{position:absolute;width:7px;height:7px;border:1px solid #d8fbff;border-radius:50%;background:#dffcff66;bottom:20px;animation:rise 3.4s infinite ease-in}
+@keyframes rise{0%{opacity:0;transform:translateY(0) scale(.7)}15%{opacity:.9}100%{opacity:0;transform:translateY(-245px) translateX(18px) scale(1.25)}}
+.b1{left:45px;animation-delay:.2s}.b2{left:82px;animation-delay:1.4s}.b3{left:135px;animation-delay:.8s}.b4{left:192px;animation-delay:2.1s}.b5{left:220px;animation-delay:1.1s}
+.tag{position:absolute;padding:8px 10px;border-radius:9px;background:#06111fcc;border:1px solid #2a4864;color:#cde8fb;font-size:12px;backdrop-filter:blur(6px)}
+.tag1{left:18px;top:35px}.tag2{right:17px;top:142px}.tag3{left:18px;bottom:80px}.tag4{right:18px;bottom:67px}
+
+.specs{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.spec{background:#0d1a2c;border:1px solid #213650;padding:11px;border-radius:10px;font-size:13px}
+.spec b{display:block;font-size:10px;color:#94d7fa;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ctrl{background:#0d1a2c;border:1px solid #213650;padding:11px;border-radius:10px}
+.ctrl label{display:flex;justify-content:space-between;gap:12px;color:#b7c9dc;font-size:12px;margin-bottom:8px}
+.ctrl label b{color:#eef6ff}
+input[type=range]{width:100%;accent-color:var(--cyan)}
+.buttons{display:flex;gap:9px;margin-top:12px}
+button{border:0;border-radius:10px;padding:11px 16px;font-weight:700;cursor:pointer}
+.start{background:var(--green);color:#052312}.reset{background:#33445b;color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.kpi{background:#091425;border:1px solid #1e334b;border-radius:11px;padding:11px}
+.kpi span{display:block;color:#879bb3;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.kpi strong{font-size:19px}
+.dobar{margin-top:10px;background:#0a1422;border:1px solid #1d334c;border-radius:11px;padding:11px}
+.dobarline{height:8px;background:#263a51;border-radius:99px;overflow:hidden;margin-top:7px}.dofill{height:100%;width:55%;background:linear-gradient(90deg,#f97316,#22c55e);transition:.3s}
+canvas{width:100%;height:240px;background:#091425;border:1px solid #1d334c;border-radius:12px;margin-top:11px}
+.legend{display:flex;gap:14px;font-size:11px;color:#9fb1c6;margin-top:8px}
+.legend i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:5px}
+.note{color:#7f93aa;font-size:11px;line-height:1.5;margin-top:10px}
+.footer{margin-top:13px;color:#6f839a;font-size:11px}
+@media(max-width:950px){.grid{grid-template-columns:1fr}.stage{height:500px}}
+@media(max-width:600px){.specs,.controls{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.model{transform:translate(-50%,-50%) rotateX(4deg) rotateY(-8deg) scale(.8)}.stage{height:440px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Bio Reactor Sim</h1>
+    <div class="sub">3D-style stirred-tank batch fermentation simulator</div>
+  </div>
+  <div class="badge" id="stateBadge">● IDLE</div>
+</header>
+
+<div class="grid">
+<section class="card">
+  <h2>3D Bioreactor</h2>
+  <div class="stage">
+    <div class="floor"></div>
+    <div class="tag tag1">Agitator motor</div>
+    <div class="tag tag2">pH / temperature probes</div>
+    <div class="tag tag3">Culture medium</div>
+    <div class="tag tag4">Air inlet / outlet</div>
+
+    <div class="model" id="model">
+      <div class="pipe in"></div><div class="pipe out"></div>
+      <div class="tank" id="tank">
+        <div class="liquid" id="liquid"></div>
+        <div class="bubble b1"></div><div class="bubble b2"></div><div class="bubble b3"></div><div class="bubble b4"></div><div class="bubble b5"></div>
+      </div>
+      <div class="topHead">
+        <div class="dome"></div><div class="neck"></div><div class="motor"></div>
+      </div>
+      <div class="shaft" id="shaft"></div>
+      <div class="blade" id="blade"></div><div class="blade b2" id="blade2"></div>
+      <div class="probe p1"></div><div class="probe p2"></div>
+      <div class="port a"></div><div class="port b"></div><div class="port c"></div>
+      <div class="gauge" id="gauge">pH 5.0</div><div class="light" id="light"></div>
+    </div>
+  </div>
+  <div class="note">Visual model is an educational approximation. Process values are simulated, not a validated industrial control model.</div>
+</section>
+
+<section class="card">
+  <h2>Process Specifications</h2>
+  <div class="specs">
+    <div class="spec"><b>Reactor</b>Stirred-Tank Bioreactor (STR)</div>
+    <div class="spec"><b>Process</b>Batch</div>
+    <div class="spec"><b>Bioprocess</b>Alcoholic Fermentation</div>
+    <div class="spec"><b>Product</b>Ethanol + CO₂</div>
+    <div class="spec"><b>Organism</b><i>Saccharomyces cerevisiae</i></div>
+    <div class="spec"><b>Substrate</b>Glucose-rich medium</div>
+  </div>
+
+  <h2 style="margin-top:18px">Operating Controls</h2>
+  <div class="controls">
+    <div class="ctrl"><label>Temperature <b><span id="tempV">30</span> °C</b></label><input id="temp" type="range" min="20" max="40" value="30"></div>
+    <div class="ctrl"><label>pH <b><span id="phV">5.0</span></b></label><input id="ph" type="range" min="3.5" max="7" step=".1" value="5"></div>
+    <div class="ctrl"><label>Agitation <b><span id="agitV">200</span> rpm</b></label><input id="agit" type="range" min="50" max="500" value="200"></div>
+    <div class="ctrl"><label>Air flow <b><span id="airV">0.20</span> vvm</b></label><input id="air" type="range" min="0" max="1" step=".05" value=".2"></div>
+  </div>
+  <div class="buttons">
+    <button class="start" id="start">Start fermentation</button>
+    <button class="reset" id="reset">Reset</button>
+  </div>
+
+  <h2 style="margin-top:18px">Live Process</h2>
+  <div class="kpis">
+    <div class="kpi"><span>Time</span><strong id="time">0.0 h</strong></div>
+    <div class="kpi"><span>Biomass</span><strong id="bio">1.00 g/L</strong></div>
+    <div class="kpi"><span>Glucose</span><strong id="glu">100.0 g/L</strong></div>
+    <div class="kpi"><span>Ethanol</span><strong id="eth">0.0 g/L</strong></div>
+  </div>
+  <div class="dobar">
+    <div style="font-size:11px;color:#9eb0c4">Dissolved oxygen <span id="dov" style="float:right">55%</span></div>
+    <div class="dobarline"><div class="dofill" id="doFill"></div></div>
+  </div>
+  <canvas id="chart" width="900" height="280"></canvas>
+  <div class="legend">
+    <span><i style="background:#38bdf8"></i>Biomass</span>
+    <span><i style="background:#f59e0b"></i>Glucose</span>
+    <span><i style="background:#a78bfa"></i>Ethanol</span>
+  </div>
+  <div class="note">Educational simulation: changing temperature and pH changes the growth-rate factor; glucose is consumed while ethanol accumulates.</div>
+</section>
+</div>
+
+<div class="footer">Bio Reactor Sim • Batch ethanol fermentation • <i>S. cerevisiae</i></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let running=false,t=0,X=1,S=100,P=0,O=55,points=[],lastTick=0;
+
+function v(id){return parseFloat($(id).value)}
+function labels(){
+  $('tempV').textContent=v('temp').toFixed(0);
+  $('phV').textContent=v('ph').toFixed(1);
+  $('agitV').textContent=v('agit').toFixed(0);
+  $('airV').textContent=v('air').toFixed(2);
+  $('gauge').textContent='pH '+v('ph').toFixed(1);
+}
+['temp','ph','agit','air'].forEach(id=>$(id).addEventListener('input',labels));
+
+function simulate(){
+  if(!running)return;
+  const T=v('temp'), ph=v('ph'), ag=v('agit'), air=v('air');
+  const fT=Math.max(0,1-Math.abs(T-30)/12);
+  const fpH=Math.max(0,1-Math.abs(ph-5.0)/2.2);
+  const fAg=Math.min(1,0.65+ag/1000);
+  const mu=.34*fT*fpH*fAg;
+  const dt=.1;
+  const growth=mu*X*dt*Math.max(0,1-S/115);
+  const sugarUse=1.65*growth;
+  X=Math.min(18,X+growth);
+  S=Math.max(0,S-sugarUse);
+  P=Math.min(65,P+0.51*sugarUse);
+  O=Math.max(0,Math.min(100,O+(air*32+(ag-200)*.015-12*growth)*dt));
+  t+=dt;
+  points.push([t,X,S,P]);if(points.length>140)points.shift();
+
+  $('time').textContent=t.toFixed(1)+' h';
+  $('bio').textContent=X.toFixed(2)+' g/L';
+  $('glu').textContent=S.toFixed(1)+' g/L';
+  $('eth').textContent=P.toFixed(1)+' g/L';
+  $('dov').textContent=O.toFixed(0)+'%';
+  $('doFill').style.width=O+'%';
+  $('liquid').style.height=(58+Math.min(20,P/65*20))+'%';
+  $('stateBadge').textContent=running?'● FERMENTING':'● IDLE';
+  $('stateBadge').style.color=running?'#9ff5bd':'#bfe4ff';
+  const speed=Math.max(.3,ag/150);
+  $('blade').style.transform='translateZ(30px) rotateZ('+(t*speed*120)+'deg)';
+  $('blade2').style.transform='translateZ(30px) rotateY(90deg) rotateZ('+(t*speed*120)+'deg)';
+  $('shaft').style.transform='translateZ(28px) rotateZ('+(t*speed*120)+'deg)';
+  $('light').style.background=O<20?'#fb7185':(running?'#22c55e':'#64748b');
+  $('light').style.boxShadow=O<20?'0 0 14px #fb7185cc':(running?'0 0 14px #22c55ecc':'none');
+
+  draw();
+  if(S<=0 || t>=48) stop();
+}
+
+function stop(){
+  running=false;$('start').textContent='Start fermentation';
+  $('stateBadge').textContent='● COMPLETE';
+}
+
+function draw(){
+  const c=$('chart'),ctx=c.getContext('2d'),w=c.width,h=c.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#091425';ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='#20364f';ctx.lineWidth=1;
+  for(let i=0;i<5;i++){const y=25+i*(h-55)/4;ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(w-15,y);ctx.stroke();}
+  if(points.length<2)return;
+  const maxT=Math.max(48,t,1);
+  const plotW=w-55,plotH=h-50;
+  function line(idx,maxY,color,dash){
+    ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash(dash||[]);
+    points.forEach((p,i)=>{
+      const x=40+(p[0]/maxT)*plotW, y=h-25-(p[idx]/maxY)*plotH;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    });
+    ctx.stroke();ctx.setLineDash([]);
+  }
+  line(1,18,'#38bdf8',[]);
+  line(2,100,'#f59e0b',[7,5]);
+  line(3,65,'#a78bfa',[2,4]);
+  ctx.fillStyle='#7890a8';ctx.font='11px Segoe UI,Arial';
+  ctx.fillText('0 h',40,h-8);ctx.fillText('48 h',w-42,h-8);
+}
+
+$('start').onclick=()=>{
+  if(t>=48||S<=0)return;
+  running=!running;
+  $('start').textContent=running?'Pause fermentation':'Start fermentation';
+  $('stateBadge').textContent=running?'● FERMENTING':'● PAUSED';
+  $('stateBadge').style.color=running?'#9ff5bd':'#bfe4ff';
+};
+$('reset').onclick=()=>{
+  running=false;t=0;X=1;S=100;P=0;O=55;points=[];
+  $('start').textContent='Start fermentation';
+  $('stateBadge').textContent='● IDLE';$('stateBadge').style.color='#bfe4ff';
+  $('time').textContent='0.0 h';$('bio').textContent='1.00 g/L';$('glu').textContent='100.0 g/L';$('eth').textContent='0.0 g/L';
+  $('dov').textContent='55%';$('doFill').style.width='55%';$('liquid').style.height='58%';
+  $('light').style.background='#64748b';$('light').style.boxShadow='none';
+  draw();
+};
+labels();draw();setInterval(simulate,100);
+</script>
+</body>
+</html>
